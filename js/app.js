@@ -16,14 +16,14 @@
     const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
     clearTimeout(t._to); t._to = setTimeout(() => t.classList.add('hidden'), 2400);
   }
-  /* тост с кнопкой «Отменить» (кликабельный, живёт 5 секунд) */
-  function undoToast(msg, onUndo, ms) {
+  /* тост с кнопкой действия (кликабельный, по умолчанию 5 секунд) */
+  function undoToast(msg, onUndo, ms, btnLabel) {
     let bar = $('undoBar');
     if (!bar) {
       bar = document.createElement('div');
       bar.id = 'undoBar';
       bar.className = 'undo hidden';
-      bar.innerHTML = '<span class="undo-msg"></span><button type="button">Отменить</button>';
+      bar.innerHTML = '<span class="undo-msg"></span><button type="button"></button>';
       document.body.appendChild(bar);
       bar.querySelector('button').addEventListener('click', () => {
         const fn = bar._fn; hideUndo();
@@ -32,6 +32,7 @@
     }
     bar._fn = onUndo || null;
     bar.querySelector('.undo-msg').textContent = msg;
+    bar.querySelector('button').textContent = btnLabel || 'Отменить';
     bar.classList.remove('hidden');
     clearTimeout(bar._to);
     bar._to = setTimeout(hideUndo, ms || 5000);
@@ -59,6 +60,7 @@
   function closeModal() {
     $('modal').classList.add('hidden');
     $('modalCard').innerHTML = '';
+    try { if (window.Scan) Scan.stop(); } catch (e) {} /* гасим камеру сканера */
     setInert(false);
     if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) {} }
     lastFocus = null;
@@ -124,6 +126,66 @@
       '</div>';
   }
 
+  /* ---------- Вес тела: ежедневная запись + динамика ---------- */
+  function weightCard() {
+    try {
+      const all = LS.get('tr_weights', {}) || {};
+      const p = Prof.get();
+      const today = Nut.todayKey();
+      const DAYS = 14;
+      const points = [];
+      for (let i = DAYS - 1; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const v = +all[key];
+        if (all[key] != null && isFinite(v) && v > 0) points.push({ di: DAYS - 1 - i, kg: v, key: key });
+      }
+      const todayVal = (all[today] != null && isFinite(+all[today])) ? +all[today] : null;
+      const latestKg = todayVal != null ? todayVal : (points.length ? points[points.length - 1].kg : (p ? +p.weight : 0));
+      const firstKg = points.length >= 2 ? points[0].kg : (p ? +p.weight : latestKg);
+      const delta = Math.round((latestKg - firstKg) * 10) / 10;
+      const good = (delta < 0 && p && p.goal === 'fatloss') || (delta > 0 && p && p.goal === 'mass');
+
+      let chart;
+      if (points.length >= 2) {
+        const W = 324, H = 88, padT = 14, padB = 18;
+        const kgs = points.map(x => x.kg);
+        let mn = Math.min.apply(null, kgs), mx = Math.max.apply(null, kgs);
+        const m = Math.max(0.4, (mx - mn) * 0.18);
+        mn -= m; mx += m;
+        const px = di => 10 + di * ((W - 20) / (DAYS - 1));
+        const py = kg => padT + (1 - (kg - mn) / (mx - mn)) * (H - padT - padB);
+        let segs = '';
+        for (let i = 1; i < points.length; i++) {
+          segs += '<line x1="' + px(points[i - 1].di).toFixed(1) + '" y1="' + py(points[i - 1].kg).toFixed(1) +
+            '" x2="' + px(points[i].di).toFixed(1) + '" y2="' + py(points[i].kg).toFixed(1) + '"/>';
+        }
+        const dots = points.map(x => '<circle cx="' + px(x.di).toFixed(1) + '" cy="' + py(x.kg).toFixed(1) + '" r="3.2"/>').join('');
+        const f0 = points[0], f1 = points[points.length - 1];
+        const desc = points.map(x => x.key.slice(8, 10) + '.' + x.key.slice(5, 7) + ' — ' + x.kg + ' кг').join(', ');
+        chart = '<svg class="chart7 wchart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="График веса за 14 дней: ' + esc(desc) + '">' +
+          '<g class="wline">' + segs + '</g>' + dots +
+          '<text x="' + px(f0.di).toFixed(1) + '" y="' + (H - 5) + '" text-anchor="middle">' + f0.kg + '</text>' +
+          '<text x="' + px(f1.di).toFixed(1) + '" y="' + (H - 5) + '" text-anchor="middle">' + f1.kg + '</text>' +
+          '</svg>';
+      } else {
+        chart = '<p class="mut small" style="text-align:center;padding:12px 0 6px">Запиши вес хотя бы 2 дня — здесь появится график 📉</p>';
+      }
+
+      const deltaTxt = points.length >= 2
+        ? (delta > 0 ? '+' + delta : (delta === 0 ? '±0' : delta)) + ' кг с ' + points[0].key.slice(8, 10) + '.' + points[0].key.slice(5, 7)
+        : 'динамика появится через пару записей';
+
+      return '<div class="card"><div class="row"><h3>⚖️ Вес тела</h3>' +
+        '<span class="pct"' + (points.length >= 2 ? ' style="color:' + (good ? 'var(--ok)' : 'var(--txt)') + ';font-weight:600"' : '') + '>' + deltaTxt + '</span></div>' +
+        '<div class="knum">' + (latestKg ? latestKg : '—') + '<span class="unit">кг · сейчас</span></div>' +
+        chart +
+        '<div class="mrow mt"><input type="text" inputmode="decimal" id="bodyW" placeholder="кг" value="' + (todayVal != null ? todayVal : (latestKg || '')) + '">' +
+        '<button class="btn sm" data-act="weight-save" style="min-width:112px">' + (todayVal != null ? 'Обновить' : 'Записать') + '</button></div>' +
+        '<p class="mut small" style="margin-top:6px">Взвешивайся утром натощак — так меньше скачет вода.</p></div>';
+    } catch (e) { return ''; }
+  }
+
   /* ---------- Сегодня ---------- */
   function renderToday() {
     const p = Prof.get();
@@ -168,6 +230,7 @@
       '<span class="wrap"><button class="btn sm ghost" data-act="water-minus">−</button><button class="btn sm ghost" data-act="water-plus">+ 250 мл</button></span></div></div>' +
       workoutCard +
       (plan ? chart7Card() : '') +
+      weightCard() +
       '<div class="card"><h3>💡 Совет тренера</h3><p class="small">' + escTab(Coach.dailyTip()) + '</p>' +
       '<button class="btn sm ghost mt" data-act="tab:coach">Спросить тренера</button></div>' +
       '';
@@ -322,7 +385,8 @@
   function foodOpen(meal) {
     FS = { meal, q: '', picked: null, grams: 100, results: [], loading: false };
     openModal('<div class="row"><h3>' + LBL.meals[meal] + ' · что съел?</h3><button class="iconbtn" data-act="modal-close">✕</button></div>' +
-      '<input type="search" id="foodSearch" placeholder="Продукт или бренд…" autocomplete="off">' +
+      '<button class="btn ghost wide" data-act="scan-open" data-meal="' + meal + '">📷 Сканировать штрих-код</button>' +
+      '<input type="search" id="foodSearch" placeholder="Продукт или бренд…" autocomplete="off" style="margin-top:8px">' +
       '<p class="mut mt" style="font-size:12px">Название — например: творог, курица, гречка. Онлайн — Open Food Facts.</p>' +
       '<div id="foodList"></div>');
     const inp = $('foodSearch'); inp.focus();
@@ -340,8 +404,9 @@
       '<div class="res"><div class="k" data-act="food-pick" data-i="' + i + '">' + esc(x.n) + '<div class="sub">' + esc(x.sub || '') + ' · Б ' + x.p + ' Ж ' + x.f + ' У ' + x.c + '</div></div><b>' + x.k + '</b></div>').join('') +
       '<p class="mut small" style="font-size:11px">Клик по продукту → указать граммы</p>';
   }
-  function foodPick(i) {
-    FS.picked = FS.results[i]; FS.grams = 100;
+  function foodPick(i) { foodPickEntry(FS.results[i]); }
+  function foodPickEntry(x) {
+    FS.picked = x; FS.grams = 100;
     foodAmount();
   }
   function foodAmount() {
@@ -573,6 +638,8 @@
         render(cur); break;
       }
       case 'food-add': foodOpen(el.dataset.meal); break;
+      case 'scan-open': try { Scan.open(el.dataset.meal); } catch (e) { toast('Сканер недоступен'); } break;
+      case 'scan-find': try { Scan.findByInput(); } catch (e) { toast('Сканер недоступен'); } break;
       case 'food-pick': foodPick(+el.dataset.i); break;
       case 'food-back': foodOpen(FS.meal); break;
       case 'food-grams': FS.grams = +el.dataset.g; $('foodGrams').value = FS.grams; foodUpdatePrev(); break;
@@ -623,6 +690,18 @@
       case 'ai-consent-no': closeModal(); aiPendingQ = null; break;
       case 'backup-export': try { Backup.exportData(); } catch (e) { toast('Ошибка экспорта'); } break;
       case 'backup-import-click': { const f = $('backupFile'); if (f) f.click(); break; }
+      case 'sw-update': location.reload(); break;
+      case 'weight-save': {
+        const inp = $('bodyW');
+        const v = inp ? parseFloat(String(inp.value || '').replace(',', '.')) : NaN;
+        if (!isFinite(v) || v < 30 || v > 300) { toast('Введи вес от 30 до 300 кг'); break; }
+        const w = LS.get('tr_weights', {}) || {};
+        w[Nut.todayKey()] = Math.round(v * 10) / 10;
+        LS.set('tr_weights', w);
+        toast('Вес записан ⚖️ ' + w[Nut.todayKey()] + ' кг');
+        render(cur);
+        break;
+      }
       case 'theme-set': {
         const v = el.dataset.v;
         if (window.Theme && (v === 'dark' || v === 'light' || v === 'system')) {
@@ -757,6 +836,7 @@
   });
 
   /* ---------- init ---------- */
+  window.AppUI = { openModal: openModal, closeModal: closeModal, foodPickEntry: foodPickEntry };
   function init() {
     if (window.Migrate) Migrate.run();
     try { if (window.Theme) Theme.apply(); } catch (e) {}
@@ -770,9 +850,10 @@
             const nw = reg.installing;
             if (!nw) return;
             nw.addEventListener('statechange', () => {
-              /* новая версия установилась в фоне — предлагаем обновиться */
+              /* новая версия установилась в фоне — показываем постоянную кнопку «Обновить» в шапке */
               if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-                undoToast('Доступно обновление', () => location.reload(), 8000);
+                const b = $('updBtn');
+                if (b) b.classList.remove('hidden');
               }
             });
           });

@@ -67,6 +67,8 @@ body:has(.restbar:not(.hidden)) #main{
 .appbar-in{max-width:520px;margin:0 auto;height:100%;display:flex;align-items:center;justify-content:space-between;
   padding:0 max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left))}
 .appbar .t{font-weight:800;font-size:18px;letter-spacing:.2px}
+.appbar .btn.upd{margin-left:auto;padding:8px 12px;font-size:13px;border-radius:10px;flex-shrink:0}
+.appbar-in{gap:6px}
 .iconbtn{background:none;border:0;color:var(--txt);cursor:pointer;padding:10px;
   min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;
   touch-action:manipulation;-webkit-tap-highlight-color:transparent}

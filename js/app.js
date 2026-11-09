@@ -457,10 +457,10 @@
   function doSend(q) {
     Coach.push('u', q); pending = true; renderCoach();
     if (AI.on()) {
-      AI.ask(q, Coach.hist().slice(0, -1)).then(a => {
+      AI.ask(q, Coach.hist().slice(0, -1)).then(r => {
         pending = false;
-        if (a) Coach.push('c', a);
-        else Coach.push('c', '⚠️ ИИ недоступен' + (navigator.onLine === false ? ' (нет сети)' : ' (проверь ключ и модель)') + '. Отвечаю по офлайн-базе:\n\n' + Coach.answer(q));
+        if (r && r.text) Coach.push('c', r.text);
+        else Coach.push('c', '⚠️ ИИ недоступен' + (r && r.error ? ' — ' + r.error : '') + (navigator.onLine === false ? ' · нет сети' : '') + '.\n\nПроверь в настройках тренера: ключ (без пробелов) и точное имя модели. Пока отвечаю по офлайн-базе:\n\n' + Coach.answer(q));
         renderCoach();
       });
     } else {

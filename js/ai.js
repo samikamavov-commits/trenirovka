@@ -45,10 +45,10 @@
     return me;
   }
 
-  /* Запрос к API. Возвращает строку или null (что-то не так — показываем офлайн-ответ) */
+  /* Запрос к API. Возвращает {text, error}: text — ответ ИИ, error — причина сбоя */
   async function ask(userText, history) {
     const c = cfg();
-    if (!on()) return null;
+    if (!on()) return { text: null, error: 'нет ключа или модели' };
     const msgs = [{ role: 'system', content: systemPrompt() }]
       .concat((history || []).slice(-10).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: m.t })))
       .concat([{ role: 'user', content: userText }]);
@@ -66,13 +66,16 @@
       });
       if (!res.ok) {
         const err = await res.text().catch(() => '');
-        throw new Error('HTTP ' + res.status + (err ? ' ' + err.slice(0, 160) : ''));
+        let hint = '';
+        try { const j = JSON.parse(err); hint = j && j.error && j.error.message ? j.error.message : err; } catch (pe) { hint = err; }
+        throw new Error('HTTP ' + res.status + (hint ? ': ' + String(hint).slice(0, 180) : ''));
       }
       const js = await res.json();
       const txt = js && js.choices && js.choices[0] && js.choices[0].message && js.choices[0].message.content;
-      return txt && txt.trim() ? txt.trim() : null;
+      return { text: txt && txt.trim() ? txt.trim() : null, error: null };
     } catch (e) {
-      return null;
+      const msg = (e && e.message) ? e.message : 'сбой';
+      return { text: null, error: e && e.name === 'AbortError' ? 'таймаут 30 с (модель не ответила)' : msg };
     } finally { clearTimeout(timer); }
   }
 

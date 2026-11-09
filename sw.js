@@ -1,5 +1,5 @@
 /* Service worker: офлайн-кэш приложения */
-const CACHE = 'fit-cache-v8';
+const CACHE = 'fit-cache-v9';
 /* Фото упражнений: img/ex/<id>.jpg (free-exercise-db, public domain).
  * Список поддерживается вручную — добавь файл сюда, если добавляешь картинку. */
 const EX_IMG = [

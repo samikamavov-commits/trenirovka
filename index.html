@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1115">
+  <meta name="color-scheme" content="dark light">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; media-src 'self'; connect-src 'self' https://openrouter.ai https://world.openfoodfacts.org; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Тренировка">
+  <title>Тренировка</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icone/icon-180.png">
+  <link rel="icon" type="image/png" href="icone/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    /* тема до отрисовки, чтобы не мигало; тёмная — по умолчанию */
+    try {
+      (function () {
+        var m = null;
+        try { m = JSON.parse(localStorage.getItem('tr_theme') || '"dark"'); } catch (e) {}
+        var light = false;
+        if (m === 'light') light = true;
+        else if (m === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) light = true;
+        if (light) {
+          document.documentElement.setAttribute('data-theme', 'light');
+          var mc = document.querySelector('meta[name="theme-color"]');
+          if (mc) mc.setAttribute('content', '#f6f7f9');
+        }
+      }());
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="appbar">
+    <div class="appbar-in">
+      <div class="t" id="appbarTitle">Сегодня</div>
+      <button class="iconbtn" data-act="open-profile" aria-label="Профиль">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section id="tab-today" class="tab"></section>
+    <section id="tab-workouts" class="tab hidden"></section>
+    <section id="tab-food" class="tab hidden"></section>
+    <section id="tab-kb" class="tab hidden"></section>
+    <section id="tab-coach" class="tab hidden"></section>
+  </main>
+
+  <nav class="tabbar" id="tabbar" aria-label="Основная навигация">
+    <button data-act="tab:today" class="act" aria-current="page"><span class="i"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span>Сегодня</button>
+    <button data-act="tab:workouts"><span class="i"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6.5 6.5v11"/><path d="M17.5 6.5v11"/><path d="M3 9v6"/><path d="M21 9v6"/><path d="M6.5 12h11"/></svg></span>Тренировки</button>
+    <button data-act="tab:food"><span class="i"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="14.5" cy="12" r="7"/><circle cx="14.5" cy="12" r="3.2"/><path d="M4 3v6"/><path d="M7 3v6"/><path d="M5.5 9v12"/></svg></span>Питание</button>
+    <button data-act="tab:kb"><span class="i"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>Знания</button>
+    <button data-act="tab:coach"><span class="i"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></span>Тренер</button>
+  </nav>
+
+  <section id="profileOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Профиль"></section>
+  <div id="modal" class="modal hidden"><div class="modal-card" id="modalCard" role="dialog" aria-modal="true" aria-label="Окно"></div></div>
+  <div id="restBar" class="restbar hidden">
+    <b><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 2h4"/><circle cx="12" cy="14" r="8"/><path d="M12 14l3-3"/></svg> <span id="restSec">1:30</span></b>
+    <button class="rbtn" data-act="rest-minus">−15 с</button>
+    <button class="rbtn" data-act="rest-plus">+15 с</button>
+    <button class="rbtn ghost push" data-act="rest-skip">Пропустить</button>
+    <div class="rfill" id="restFill"></div>
+  </div>
+  <div id="restAnnounce" class="sr-only" role="status"></div>
+  <div id="toast" class="toast hidden" role="status"></div>
+
+  <script src="js/data-exercises.js"></script>
+  <script src="js/anim.js"></script>
+  <script src="js/data-foods.js"></script>
+  <script src="js/knowledge.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/planner.js"></script>
+  <script src="js/nutrition.js"></script>
+  <script src="js/coach.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/journal.js"></script>
+  <script src="js/eximg.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
